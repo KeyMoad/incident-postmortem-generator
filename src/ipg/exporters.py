@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from src.ipg.models import Incident
+from ipg.models import Incident
 
 
 def export_json(incident: Incident, out_path: Path) -> Path:

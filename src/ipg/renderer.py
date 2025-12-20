@@ -1,7 +1,7 @@
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from src.ipg.models import Incident
+from ipg.models import Incident
 
 
 def _build_jinja_env(templates_dir: Path) -> Environment:

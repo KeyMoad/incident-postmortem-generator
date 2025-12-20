@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict
 from pydantic import ValidationError
 
-from src.ipg.models import Incident
+from ipg.models import Incident
 
 
 class IncidentParseError(Exception):
