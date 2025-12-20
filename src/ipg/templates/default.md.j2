@@ -1,0 +1,185 @@
+{# Default Postmortem Template (Markdown) #}
+{# Save as: src/ipg/templates/default.md.j2 #}
+
+# Postmortem: {{ incident.title }}
+- **Incident ID:** {{ incident.incident_id }}
+- **Status:** {{ incident.status | upper }}
+- **Severity:** {{ incident.severity }}
+- **Service:** {{ incident.service.name }} ({{ incident.service.environment }})
+- **Owner Team:** {{ incident.service.owner_team }}
+- **Start:** {{ incident.time.start }} ({{ incident.time.timezone }})
+- **End:** {{ incident.time.end }} ({{ incident.time.timezone }})
+- **Detected:** {{ incident.time.detected }} ({{ incident.time.timezone }})
+- **Mitigated:** {{ incident.time.mitigated }} ({{ incident.time.timezone }})
+
+---
+
+## Summary
+
+### What happened
+{{ incident.summary.what_happened }}
+
+### User impact
+{{ incident.summary.user_impact }}
+
+### Duration
+- **Duration (minutes):** {{ incident.summary.duration_minutes }}
+
+---
+
+## Impact
+
+- **Customers affected (estimate):** {{ incident.impact.customers_affected_estimate }}
+- **Regions affected:** {{ incident.impact.regions_affected | join(", ") }}
+- **Peak error rate:** {{ "%.1f"|format(incident.impact.request_error_rate_peak_percent) }}%
+- **Peak p95 latency:** {{ incident.impact.latency_p95_peak_ms }} ms
+- **Business impact:** {{ incident.impact.business_impact }}
+
+### SLA/SLO
+- **SLO breached:** {{ "Yes" if incident.impact.sla_slo.slo_breached else "No" }}
+{% if incident.impact.sla_slo.slo_breached %}
+- **SLO name:** {{ incident.impact.sla_slo.slo_name }}
+- **Breach window:** {{ incident.impact.sla_slo.breach_window }}
+{% endif %}
+
+---
+
+## Detection
+
+- **Detected by:** {{ incident.detection.detected_by }}
+
+### Signals
+{% for s in incident.detection.signals %}
+- **{{ s.source }} — {{ s.name }}:** {{ s.details }}
+{% endfor %}
+
+### Customer reports
+- **Count:** {{ incident.detection.customer_reports.count }}
+- **Channels:** {{ incident.detection.customer_reports.channels | join(", ") }}
+
+{% if incident.detection.gaps and incident.detection.gaps | length > 0 %}
+### Gaps
+{% for g in incident.detection.gaps %}
+- {{ g }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Timeline (UTC)
+
+{% for e in incident.timeline %}
+- **{{ e.time }}** — *{{ e.type }}* — **{{ e.actor }}**: {{ e.message }}
+  {% if e.links and e.links | length > 0 %}
+  {% for l in e.links %}
+  - {{ l.label }}: {{ l.url }}
+  {% endfor %}
+  {% endif %}
+{% endfor %}
+
+---
+
+## Root Cause
+
+### Direct cause
+{{ incident.root_cause.direct_cause }}
+
+### Contributing factors
+{% for f in incident.root_cause.contributing_factors %}
+- {{ f }}
+{% endfor %}
+
+### Why it was not prevented
+{{ incident.root_cause.why_it_was_not_prevented }}
+
+---
+
+## Response
+
+### What worked well
+{% for w in incident.response.what_worked_well %}
+- {{ w }}
+{% endfor %}
+
+### What did not work well
+{% for n in incident.response.what_did_not_work_well %}
+- {{ n }}
+{% endfor %}
+
+### Where we got lucky
+{% for l in incident.response.where_we_got_lucky %}
+- {{ l }}
+{% endfor %}
+
+---
+
+## Communication
+
+### Internal
+- **Channel:** {{ incident.communication.internal.channel }}
+- **Started at:** {{ incident.communication.internal.started_at }}
+
+### External
+- **Status page used:** {{ "Yes" if incident.communication.external.status_page_used else "No" }}
+- **First update at:** {{ incident.communication.external.first_update_at }}
+- **Updates count:** {{ incident.communication.external.updates_count }}
+
+{% if incident.communication.external.customer_message %}
+**Customer message:**
+{{ incident.communication.external.customer_message }}
+{% endif %}
+
+---
+
+## Action Items
+
+| ID | Title | Owner | Priority | Due | Type | Status |
+|---|---|---|---|---|---|---|
+{% for a in incident.action_items -%}
+| {{ a.id }} | {{ a.title }} | {{ a.owner }} | {{ a.priority }} | {{ a.due }} | {{ a.type }} | {{ a.status }} |
+{% endfor %}
+
+{% for a in incident.action_items %}
+{% if a.success_criteria %}
+**{{ a.id }} Success Criteria:** {{ a.success_criteria }}
+{% endif %}
+{% if a.links and a.links | length > 0 %}
+{% for l in a.links %}
+- {{ a.id }} — {{ l.label }}: {{ l.url }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+---
+
+## References
+
+{% if incident.references.dashboards and incident.references.dashboards | length > 0 %}
+### Dashboards
+{% for r in incident.references.dashboards %}
+- {{ r.label }}: {{ r.url }}
+{% endfor %}
+{% endif %}
+
+{% if incident.references.logs and incident.references.logs | length > 0 %}
+### Logs
+{% for r in incident.references.logs %}
+- {{ r.label }}: {{ r.url }}
+{% endfor %}
+{% endif %}
+
+{% if incident.references.runbooks and incident.references.runbooks | length > 0 %}
+### Runbooks
+{% for r in incident.references.runbooks %}
+- {{ r.label }}: {{ r.url }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Tags
+{% if incident.tags and incident.tags | length > 0 %}
+{{ incident.tags | join(", ") }}
+{% else %}
+_n/a_
+{% endif %}

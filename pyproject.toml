@@ -1,12 +1,22 @@
 [project]
 name = "incident-postmortem-generator"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generate incident postmortems (Markdown/JSON/CSV) from YAML/JSON incident files."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "jinja2>=3.1.6",
     "pydantic>=2.12.5",
     "pyyaml>=6.0.3",
     "typer>=0.20.1",
 ]
+
+[project.scripts]
+ipg = "ipg.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ipg"]
