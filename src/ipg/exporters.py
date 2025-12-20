@@ -68,15 +68,15 @@ def export_action_items_csv(incident: Incident, out_path: Path) -> Path:
 def export_all(
     incident: Incident,
     out_dir: Path,
-    json_name: str = "postmortem.json",
-    action_items_csv_name: str = "action_items.csv",
+    json_name: str = "postmortem",
+    action_items_csv_name: str = "action_items",
 ) -> Dict[str, Path]:
     """
     Convenience exporter that writes common files to out_dir.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    json_path = export_json(incident, out_dir / json_name)
-    csv_path = export_action_items_csv(incident, out_dir / action_items_csv_name)
+    json_path = export_json(incident, out_dir / f"{json_name}-{incident.incident_id}.json")
+    csv_path = export_action_items_csv(incident, out_dir / f"{action_items_csv_name}-{incident.incident_id}.csv")
 
     return {"json": json_path, "action_items_csv": csv_path}
