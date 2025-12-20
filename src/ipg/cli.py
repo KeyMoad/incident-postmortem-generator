@@ -7,13 +7,16 @@ from ipg.exporters import export_all
 from ipg.parser import IncidentParseError, load_incident
 from ipg.renderer import write_postmortem_files
 
+VERSION = "0.1.0"
+DEFAULT_TEMPLATE = "default.md.j2"
+
 app = typer.Typer(
     name="ipg",
     help="Incident Postmortem Generator — generate Markdown postmortems from YAML/JSON incident data.",
     add_completion=False,
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
-
-DEFAULT_TEMPLATE = "default.md.j2"
 
 
 def _default_templates_dir() -> Path:
@@ -22,6 +25,32 @@ def _default_templates_dir() -> Path:
 
 def _err(message: str) -> None:
     typer.echo(message, err=True)
+
+
+@app.callback(invoke_without_command=True)
+def cli(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        help="Show version and exit.",
+        is_eager=True,
+    ),
+) -> None:
+    """
+    Generate incident postmortems from YAML/JSON.
+
+    Use:
+      - validate: validate an incident file against the schema
+      - generate: render Markdown + export JSON/CSV
+    """
+    if version:
+        typer.echo(VERSION)
+        raise typer.Exit(code=0)
+
+    if ctx.invoked_subcommand is None:
+        return
 
 
 @app.command("generate")
@@ -44,28 +73,33 @@ def generate(
         dir_okay=True,
         writable=True,
         resolve_path=True,
-        help="Output directory (default: ./out).",
+        help="Output directory.",
+        show_default=True,
     ),
     template: str = typer.Option(
         DEFAULT_TEMPLATE,
         "--template",
         "-t",
-        help="Template filename inside templates directory (default: default.md.j2).",
+        help="Template filename inside templates directory.",
+        show_default=True,
     ),
     templates_dir: Optional[Path] = typer.Option(
         None,
         "--templates-dir",
         help="Optional custom templates directory (defaults to package templates/).",
+        show_default=True,
     ),
     no_json: bool = typer.Option(
         False,
         "--no-json",
         help="Do not export postmortem.json.",
+        show_default=True,
     ),
     no_csv: bool = typer.Option(
         False,
         "--no-csv",
         help="Do not export action_items.csv.",
+        show_default=True,
     ),
 ) -> None:
     """
@@ -87,14 +121,14 @@ def generate(
         if not (no_json and no_csv):
             exports = export_all(incident, out_dir=out_dir)
 
-            if no_json and "json" in exports:
+            if no_json and exports.get("json"):
                 try:
                     exports["json"].unlink(missing_ok=True)
                 except OSError:
                     pass
                 exports.pop("json", None)
 
-            if no_csv and "action_items_csv" in exports:
+            if no_csv and exports.get("action_items_csv"):
                 try:
                     exports["action_items_csv"].unlink(missing_ok=True)
                 except OSError:
