@@ -1,0 +1,187 @@
+# Incident Postmortem Generator — Sample Incident Input
+# Save as: examples/incident.sample.yml
+
+version: "1.0"
+incident_id: "INC-2025-0017"
+title: "Checkout API elevated 5xx errors"
+status: "resolved" # resolved | mitigated | ongoing
+severity: "SEV-2"  # SEV-1 | SEV-2 | SEV-3 | SEV-4
+
+service:
+  name: "checkout-api"
+  owner_team: "Payments Platform"
+  environment: "production" # production | staging | dev
+  tier: "critical"         # critical | high | medium | low
+
+time:
+  timezone: "UTC"
+  start: "2025-12-18T13:07:00Z"
+  end: "2025-12-18T14:02:00Z"
+  detected: "2025-12-18T13:10:00Z"
+  mitigated: "2025-12-18T13:28:00Z"
+
+summary:
+  what_happened: >
+    Beginning at 13:07 UTC, the checkout-api began returning elevated 5xx errors.
+    The issue was triggered by a misconfigured database connection pool limit introduced
+    in a configuration rollout. Error rates peaked at ~18% before mitigation.
+  user_impact: >
+    A subset of users were unable to complete checkout. Some requests succeeded after retries,
+    but many experienced failures on initial attempt.
+  duration_minutes: 55
+
+impact:
+  customers_affected_estimate: 8200
+  regions_affected: ["us-east-1"]
+  request_error_rate_peak_percent: 18.2
+  latency_p95_peak_ms: 2400
+  business_impact: >
+    Increased checkout failures reduced conversion rate during the incident window.
+  sla_slo:
+    slo_breached: true
+    slo_name: "Checkout Success Rate (30d rolling)"
+    breach_window: "2025-12-18T13:12:00Z to 2025-12-18T13:31:00Z"
+
+detection:
+  detected_by: "monitoring_alert" # monitoring_alert | customer_report | internal_report | partner
+  signals:
+    - source: "Prometheus"
+      name: "checkout_api_5xx_rate"
+      details: "Alert fired when 5xx rate exceeded 5% for 5 minutes."
+    - source: "Datadog"
+      name: "p95_latency"
+      details: "Latency SLO burn rate increased sharply."
+  customer_reports:
+    count: 34
+    channels: ["support_chat", "email"]
+  gaps:
+    - "Alert thresholds did not capture gradual error-rate increases early enough."
+
+timeline:
+  - time: "2025-12-18T13:07:00Z"
+    type: "trigger" # trigger | detection | investigation | mitigation | recovery | comms | followup
+    actor: "deploy-bot"
+    message: "Config rollout started for checkout-api (db pool changes)."
+    links:
+      - label: "Deployment"
+        url: "https://example.com/deploy/12345"
+
+  - time: "2025-12-18T13:10:00Z"
+    type: "detection"
+    actor: "oncall"
+    message: "5xx alert fired; on-call acknowledged."
+
+  - time: "2025-12-18T13:14:00Z"
+    type: "investigation"
+    actor: "oncall"
+    message: "Initial triage: DB connection saturation observed; error spikes correlate with rollout."
+
+  - time: "2025-12-18T13:18:00Z"
+    type: "investigation"
+    actor: "payments-team"
+    message: "Confirmed db pool limit reduced from 80 → 20 in config; connections queueing."
+
+  - time: "2025-12-18T13:22:00Z"
+    type: "mitigation"
+    actor: "oncall"
+    message: "Paused rollout and began config rollback."
+
+  - time: "2025-12-18T13:28:00Z"
+    type: "mitigation"
+    actor: "deploy-bot"
+    message: "Rollback completed; error rate trending down."
+
+  - time: "2025-12-18T13:35:00Z"
+    type: "comms"
+    actor: "incident-commander"
+    message: "Status page updated: investigating elevated errors in checkout."
+    links:
+      - label: "Status Page"
+        url: "https://status.example.com/incidents/abcd"
+
+  - time: "2025-12-18T14:02:00Z"
+    type: "recovery"
+    actor: "oncall"
+    message: "Service stable; error rate back to baseline; incident resolved."
+
+root_cause:
+  direct_cause: >
+    A configuration change reduced the database connection pool limit, causing connection
+    starvation and increased 5xx errors under normal load.
+  contributing_factors:
+    - "Config rollout did not include a guardrail check for pool-size reduction."
+    - "No canary analysis on connection saturation metrics before full rollout."
+  why_it_was_not_prevented: >
+    The configuration pipeline lacked policy checks for risky parameter changes, and
+    runbooks did not include a pre-rollout review step for connection pool settings.
+
+response:
+  what_worked_well:
+    - "Monitoring detected the issue within minutes."
+    - "Rollback procedure was executed quickly and safely."
+    - "On-call escalation to service owners was fast."
+  what_did_not_work_well:
+    - "Initial alerting did not capture early gradual increases."
+    - "No automated rollback on SLO burn rate."
+  where_we_got_lucky:
+    - "Rollback fully restored service without requiring a DB restart."
+
+communication:
+  internal:
+    channel: "#incidents"
+    started_at: "2025-12-18T13:12:00Z"
+  external:
+    status_page_used: true
+    first_update_at: "2025-12-18T13:35:00Z"
+    updates_count: 2
+    customer_message: >
+      We investigated elevated error rates affecting checkout and rolled back a configuration
+      change. Service has returned to normal operation.
+
+action_items:
+  - id: "AI-001"
+    title: "Add policy checks for risky DB pool configuration changes"
+    owner: "payments-platform"
+    priority: "P0" # P0 | P1 | P2 | P3
+    due: "2026-01-05"
+    type: "prevention" # prevention | detection | response | reliability | process | documentation
+    status: "open"     # open | in_progress | done
+    success_criteria: "Config pipeline blocks pool-size reductions >25% without approval."
+    links:
+      - label: "Tracking Ticket"
+        url: "https://example.com/jira/AI-001"
+
+  - id: "AI-002"
+    title: "Add canary analysis for DB saturation metrics during rollout"
+    owner: "sre"
+    priority: "P1"
+    due: "2026-01-12"
+    type: "detection"
+    status: "open"
+    success_criteria: "Rollouts auto-halt on sustained connection saturation for 3 minutes."
+
+  - id: "AI-003"
+    title: "Update runbook: pre-rollout review checklist for connection pool settings"
+    owner: "payments-team"
+    priority: "P2"
+    due: "2026-01-20"
+    type: "documentation"
+    status: "open"
+    success_criteria: "Runbook includes checklist and rollback steps with owners."
+
+tags:
+  - "config"
+  - "database"
+  - "rollout"
+  - "slo"
+
+references:
+  dashboards:
+    - label: "Checkout API Overview"
+      url: "https://example.com/dashboards/checkout"
+  logs:
+    - label: "checkout-api logs"
+      url: "https://example.com/logs/checkout"
+  runbooks:
+    - label: "Checkout On-Call Runbook"
+      url: "https://example.com/runbooks/checkout"
