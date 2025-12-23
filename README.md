@@ -201,4 +201,4 @@ uv run pytest
 
 ## License
 
-MIT
+[MIT License](LICENCE) © 2025 Mohamadreza Najarbashi
